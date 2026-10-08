@@ -152,7 +152,7 @@ jobs:
 
       - name: Zip Riivolution patch
         run: |
-          (cd riivolution/sd && zip -qr ../../Samba-Riivolution.zip .)
+          (cd riivolution && zip -qr ../Samba-Riivolution.zip .)
 
       - uses: actions/upload-artifact@v4
         with:
