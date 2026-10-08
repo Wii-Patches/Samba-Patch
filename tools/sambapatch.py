@@ -79,7 +79,7 @@ def patch_disc(src, dst, flags=3):
         d = os.path.join(ex, 'sys', 'main.dol')
         region, size = patch_dol(d, d, flags=flags)
         kind = os.path.splitext(dst)[1].lstrip('.').lower()
-        fmt = {'wbfs': '--wbfs', 'iso': '--iso', 'rvz': '--rvz'}.get(kind) or sys.exit('output must be .iso, .wbfs or .rvz')
+        fmt = {'wbfs': '--wbfs', 'iso': '--iso'}.get(kind) or sys.exit('output must be .iso or .wbfs')
         subprocess.run([wit, 'copy', ex, dst, fmt, '--overwrite', '-q'], check=True)
     return region, size
 

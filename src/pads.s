@@ -331,9 +331,9 @@
     stb     0, 0x5D(30)
     li      0, 2
     stb     0, 0x5E(30)                 # pointer is valid
-    lwz     0, 0x28(28)
-    addi    0, 0, 1
-    stw     0, 0x28(28)                 # frame counter (debugging)
+    lwz     4, 0x28(28)
+    addi    4, 4, 1
+    stw     4, 0x28(28)                 # frame counter (debugging)
     li      29, 1
 Ldone:
     mr      3, 29

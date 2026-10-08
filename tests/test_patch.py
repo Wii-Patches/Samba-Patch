@@ -29,3 +29,10 @@ for r in REGIONS.values():
         except SystemExit as e:
             assert 'clean retail' in str(e)
     print('ok', r, size)
+
+# the shipped words exist for every KPADRead address (no toolchain needed at patch time)
+import json
+pre = json.load(open(os.path.join(ROOT, 'tools', 'prebuilt', 'pads.json')))
+for r in REGIONS.values():
+    assert '%08X' % r.kpad_read in pre, r
+print('ok prebuilt')

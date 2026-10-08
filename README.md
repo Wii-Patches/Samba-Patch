@@ -24,21 +24,42 @@ when plugged into the Wii Remote. A real Wii Remote still works next to the pad.
 
 ## Use
 
+**GUI (recommended):** run the Samba Patcher app, tick the controllers you want,
+and drop a `.wbfs` or `.iso` on the window. The disc is patched in place (so USB
+loaders still find it) and the original is kept next to it as `<name>.bak`.
+Builds for macOS, Linux and Windows come from the *Build GUI patcher* workflow.
+
+**Command line:**
+
 ```bash
-python3 tools/sambapatch.py disc "Samba de Amigo (USA) (En,Fr,Es).rvz" patched.iso   # also .wbfs / .rvz
+python3 tools/gui.py                                                                 # the GUI from source
+python3 tools/sambapatch.py disc "Samba de Amigo (USA) (En,Fr,Es).rvz" patched.iso   # output .iso or .wbfs
 python3 tools/sambapatch.py dol main.dol main_patched.dol                            # just the DOL
 python3 tools/sambapatch.py riivolution                                              # riivolution/ for an SD card
 ```
 
-Disc patching needs [wit](https://wit.wiimm.de/). The Gecko cheat route is not
-offered: the hook lives at `0x80001820`, where USB loaders keep their code handler.
+Disc patching needs [wit](https://wit.wiimm.de/) (bundled in the GUI builds). The
+Gecko cheat route is not offered: the hook lives at `0x80001820`, where USB
+loaders keep their code handler.
+
+## Building
+
+End users need no toolchain: the assembled hook ships in `tools/prebuilt/pads.json`.
+After editing `src/pads.s`, with [devkitPPC](https://devkitpro.org/) installed:
+
+```bash
+python3 tools/gen_prebuilt.py          # rebuild pads.json  (--check to verify it is current)
+python3 tools/sambapatch.py riivolution
+python3 -m PyInstaller --name Samba-Patcher --windowed --collect-all tkinterdnd2 \
+  --icon assets/icon.icns --paths tools --paths src --add-data assets/logo.png:assets \
+  --add-data tools/prebuilt:tools/prebuilt --add-binary "$(which wit):." tools/gui.py
+```
 
 ## Layout
 
 - `src/pads.s`, `src/gen_pads.py` the hook (replaces the one `bl KPADRead` in the input manager)
-- `tools/` DOL editor, assembler wrapper (devkitPPC), region table, patcher
+- `tools/` DOL editor, region table, patcher (`sambapatch.py`), GUI (`gui.py`), prebuilt hook, assembler wrapper
 - `lab/` throwaway Dolphin harness (GDB stub + input pipes) used to test
 - `tests/test_patch.py` patches all three DOLs and checks the result
 
-Tested in Dolphin on the USA release. Europe and Japan sites were found by
-signature match against the USA DOL (unique) and are not yet boot-tested.
+Boot-tested in Dolphin on all three releases (GC pad: A, stick pointer, hook running each frame).

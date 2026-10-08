@@ -3,13 +3,13 @@ instruction in the game that gets redirected to it.
 
 Run directly it prints a summary; tools/gen_prebuilt.py calls make().
 """
+import json
 import os
 import struct
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'tools'))
-import asm
 from layout import CAVE_BASE, CFG, STATE, STATE_END
 from ops import Blob, Feature, Patch, b_insn
 
@@ -56,7 +56,21 @@ def cfg_blob(flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTO
     return bytes(b)
 
 
-def code_blob(kpad_read):
+def prebuilt_path():
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, 'tools', 'prebuilt', 'pads.json')
+    return os.path.join(HERE, '..', 'tools', 'prebuilt', 'pads.json')
+
+
+def code_blob(kpad_read, rebuild=False):
+    """The assembled hook for a KPADRead address: the shipped words, or (devkitPPC) a fresh build."""
+    if not rebuild:
+        try:
+            words = json.load(open(prebuilt_path()))['%08X' % kpad_read]
+            return struct.pack('>%dI' % len(words), *[int(w, 16) for w in words])
+        except (OSError, KeyError):
+            pass
+    import asm
     consts = dict(CFG=CFG, STATE=STATE, MAGIC=MAGIC, **OFF)
     src = open(os.path.join(HERE, 'pads.s')).read()
     return asm.assemble(src, CAVE_BASE, syms=dict(KPADREAD=kpad_read), consts=consts)
