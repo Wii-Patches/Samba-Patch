@@ -8,7 +8,7 @@ L.start(sys.argv[1], log='shots/boot.log')
 try:
     time.sleep(8)
     g=Gdb(); g.halt()
-    inject(g, gen_pads.make('R3BE8P',0x80116DAC,0x802F5948))
+    inject(g, gen_pads.make('R3BE8P',0x80116DAC,0x802F5948,-22479,0x803F8518))
     g.resume()
     for i in range(8):
         time.sleep(4)

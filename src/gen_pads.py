@@ -34,11 +34,11 @@ CC_MAP = [
 VECTORS = [(0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
 
 OFF = dict(SPIKE=0x3C, THRESH=0x40, SPEED=0x44, DEADZONE=0x48, INV1000=0x4C, SCALE=0x50,
-           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0)
+           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0, CONNOFF=0x120, CONNST=0x124, ONE=0x128)
 MAGIC = 0x53444131          # 'SDA1'
 
 
-def cfg_blob(flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTORS):
+def cfg_blob(conn_off, conn_state, flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTORS):
     b = bytearray(STATE - CFG)
     for i, v in enumerate(vectors):
         struct.pack_into('>3f', b, i * 12, *v)
@@ -47,8 +47,11 @@ def cfg_blob(flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTO
     struct.pack_into('>i', b, OFF['SPEED'], speed)
     struct.pack_into('>i', b, OFF['DEADZONE'], deadzone)
     struct.pack_into('>f', b, OFF['INV1000'], 0.001)
+    struct.pack_into('>f', b, OFF['ONE'], 1.0)
     struct.pack_into('>f', b, OFF['SCALE'], 100.0)
     struct.pack_into('>I', b, OFF['FLAGS'], flags)
+    struct.pack_into('>i', b, OFF['CONNOFF'], conn_off)
+    struct.pack_into('>I', b, OFF['CONNST'], conn_state)
     struct.pack_into('>Q', b, OFF['MAGIC_D'], 0x4330000080000000)
     for base, m in ((OFF['GCMAP'], GC_MAP), (OFF['CCMAP'], CC_MAP)):
         for i, (src, dst) in enumerate(m):
@@ -76,7 +79,7 @@ def code_blob(kpad_read, rebuild=False):
     return asm.assemble(src, CAVE_BASE, syms=dict(KPADREAD=kpad_read), consts=consts)
 
 
-def make(region, site, kpad_read, flags=3, **cfg):
+def make(region, site, kpad_read, conn_off, conn_state, flags=3, **cfg):
     """Operations that wire the pad hook into one release.
 
     `site` is the `bl KPADRead` in the input manager; `kpad_read` its target.
@@ -88,12 +91,12 @@ def make(region, site, kpad_read, flags=3, **cfg):
         Patch(site, struct.pack('>I', b_insn(CAVE_BASE, site, link=True)),
               struct.pack('>I', orig), 'KPADRead call in the input manager -> pad hook'),
         Blob(CAVE_BASE, code, 'pad hook'),
-        Blob(CFG, cfg_blob(flags, **cfg) + bytes(STATE_END - STATE), 'pad hook tables and state'),
+        Blob(CFG, cfg_blob(conn_off, conn_state, flags, **cfg) + bytes(STATE_END - STATE), 'pad hook tables and state'),
     ]
     return Feature('pads', 'GameCube / Classic Controller', region, ops)
 
 
 if __name__ == '__main__':
-    f = make('R3BE8P', 0x80116DAC, 0x802F5948)
+    f = make('R3BE8P', 0x80116DAC, 0x802F5948, -22479, 0x803F8518)
     for op in f.ops:
         print(type(op).__name__, hex(op.addr), len(getattr(op, 'data', getattr(op, 'new', b''))))

@@ -11,7 +11,7 @@ def dump(g,addr,n):
 try:
     time.sleep(8)
     g=Gdb(); g.halt()
-    inject(g, gen_pads.make('R3BE8P',0x80116DAC,0x802F5948))
+    inject(g, gen_pads.make('R3BE8P',0x80116DAC,0x802F5948,-22479,0x803F8518))
     print('injected'); g.resume()
     # sit through boot; poll the frame counter of channel 0 state
     for i in range(40):

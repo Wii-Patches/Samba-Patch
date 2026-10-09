@@ -19,6 +19,12 @@ makes a pad look like both:
 | Left stick (menus) | Move the pointer |
 | A, B, X (1), Y (2), Start (+), D-pad | Wii Remote buttons |
 
+The game's controller setup ("shake the Wii Remote and the Nunchuk") works with the
+pad too: press L, then R, where it asks for a shake. The patch also fills in the
+game's own "Wii Remote and Nunchuk connected" flags, which only the Wii Remote
+connect callbacks set, so no real Wii Remote or Nunchuk is needed to get past the
+"Connect a Nunchuk" screen.
+
 A GameCube pad in port 1 / 2 drives Wii Remote 1 / 2. A Classic Controller works
 when plugged into the Wii Remote. A real Wii Remote still works next to the pad.
 

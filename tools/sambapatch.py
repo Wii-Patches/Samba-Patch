@@ -31,7 +31,7 @@ CHOICES = (('GameCube controller + Classic Controller', 'both', 3),
 
 
 def feature(region, flags=3):
-    return gen_pads.make(region.disc_id, region.site, region.kpad_read, flags)
+    return gen_pads.make(region.disc_id, region.site, region.kpad_read, region.conn_off, region.conn_state, flags)
 
 
 def detect_region(dol, disc_id=None):

@@ -4,12 +4,18 @@ The USA main.dol was read in Ghidra: the game's input manager calls KPADRead onc
 per channel per frame from a single place.  The other two releases were found by
 matching the surrounding code (branch targets and immediates masked, tools/sig.py)
 against the USA DOL; each match was unique.
+
+The connection flags are those the game's WPAD connect / extension callbacks
+(USA 0x80128A60, 0x80128AF4) write: the byte at r13+conn_off and the one below it,
+and word 0 of each 20-byte entry at conn_state.
 """
 
 
 class Region:
-    def __init__(self, disc_id, name, site, kpad_read):
+    def __init__(self, disc_id, name, site, kpad_read, conn_off, conn_state):
         self.disc_id, self.name = disc_id, name
+        self.conn_off = conn_off        # r13-relative address of the "Wii Remote / Nunchuk connected" bit byte
+        self.conn_state = conn_state    # per-channel connected words, 20 bytes apart
         self.site = site                # the `bl KPADRead` in the input manager
         self.kpad_read = kpad_read
 
@@ -18,7 +24,7 @@ class Region:
 
 
 REGIONS = {
-    'R3BE8P': Region('R3BE8P', 'USA', 0x80116DAC, 0x802F5948),
-    'R3BP8P': Region('R3BP8P', 'Europe', 0x80116DA8, 0x802F5948),
-    'R3BJ8P': Region('R3BJ8P', 'Japan', 0x80117620, 0x802F6D28),
+    'R3BE8P': Region('R3BE8P', 'USA', 0x80116DAC, 0x802F5948, -22479, 0x803F8518),
+    'R3BP8P': Region('R3BP8P', 'Europe', 0x80116DA8, 0x802F5948, -22479, 0x803F8518),
+    'R3BJ8P': Region('R3BJ8P', 'Japan', 0x80117620, 0x802F6D28, -22415, 0x803F9B70),
 }

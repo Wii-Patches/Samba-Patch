@@ -13,6 +13,8 @@
 #   +0x20 pos   (Vec2)                      IR pointer, driven by the left stick
 #   +0x5C dev_type = 1 (Nunchuk)  +0x5E dpd_valid = 2
 #   +0x68 acc   (Vec)                       left hand   = the Nunchuk
+#   +0x18 / +0x74 acc_value                 length of each acc vector (the controller setup
+#                                           averages it to spot the shake that picks a hand)
 #
 # Each hand's "acceleration" is one of five resting orientations (high, middle,
 # low, left, right) picked from that hand's stick, plus a one-frame spike along
@@ -22,6 +24,7 @@
 #
 # Registers: r31 channel, r30 buffer, r29 sample count, r28 channel state,
 #            r27 CFG, r26 source (1 = GC pad, 2 = Classic Controller)
+# State:     0x2C we hold the connection bits  0x30 quiet frames
 # Stack:     0x08 hold  0x0C lx  0x10 ly  0x14 rx  0x18 ry  0x1C shake L
 #            0x20 shake R  0x28 scratch double
     stwu    1, -0x70(1)
@@ -82,6 +85,32 @@
     bne     Ldone
     li      26, 2
 5:
+    # ---- connection bookkeeping ----
+    # The game decides which hands exist from its own flags, set by the WPAD connect and
+    # extension callbacks, which never fire for a pad: a byte of "Wii Remote on channel c"
+    # (bit 2c) / "Nunchuk on channel c" (bit 2c+1) bits, the same bits again in the byte
+    # below it, and a per-channel connected word.  Without them the controller setup
+    # sees nobody and asks for a Nunchuk.  Set them here while the pad drives the channel.
+    lwz     12, CONNOFF(27)
+    add     12, 12, 13
+    slwi    10, 31, 1
+    li      11, 3
+    slw     11, 11, 10
+    lbz     0, 0(12)
+    or      0, 0, 11
+    stb     0, 0(12)
+    li      11, 1
+    slw     11, 11, 10
+    lbz     0, -1(12)
+    or      0, 0, 11
+    stb     0, -1(12)
+    lwz     12, CONNST(27)
+    mulli   10, 31, 20
+    li      0, 1
+    stwx    0, 12, 10
+    stw     0, 0x2C(28)                 # we hold this channel's bits
+    li      0, 0
+    stw     0, 0x30(28)                 # frames since the pad went quiet
     # ---- gather: hold bits, two sticks (percent), two shake buttons ----
     cmpwi   26, 2
     beq     6f
@@ -264,12 +293,15 @@
     lfs     5, 4(4)
     lfs     6, 8(4)
     lfs     0, SPIKE(27)
+    lfs     11, ONE(27)                 # acc_value (the vector's length): 1 at rest ...
+    fmr     12, 11
     lwz     4, 0x10(28)
     cmpwi   4, 0
     beq     1f
     fmuls   1, 1, 0
     fmuls   2, 2, 0
     fmuls   3, 3, 0
+    fmr     11, 0                       # ... the spike on the frame the button goes down
     li      4, 0
     stw     4, 0x10(28)
 1:  lwz     4, 0x14(28)
@@ -278,6 +310,7 @@
     fmuls   4, 4, 0
     fmuls   5, 5, 0
     fmuls   6, 6, 0
+    fmr     12, 0
     li      4, 0
     stw     4, 0x14(28)
 1:
@@ -318,12 +351,12 @@
     stfs    1, 0x68(30)
     stfs    2, 0x6C(30)
     stfs    3, 0x70(30)
+    stfs    12, 0x18(30)                # acc_value, which the controller setup reads to catch a shake
+    stfs    11, 0x74(30)                # (Nunchuk)
     li      0, 0
-    stw     0, 0x18(30)
     stw     0, 0x1C(30)
     stw     0, 0x60(30)
     stw     0, 0x64(30)
-    stw     0, 0x74(30)
     stw     0, 0x78(30)
     li      0, 1
     stb     0, 0x5C(30)                 # a Nunchuk is plugged in
@@ -335,8 +368,41 @@
     addi    4, 4, 1
     stw     4, 0x28(28)                 # frame counter (debugging)
     li      29, 1
+    b       9f                          # driven this frame: keep the connection bits
 Ldone:
-    mr      3, 29
+    # nobody drives the channel: give the connection bits back (after 1.5 s of quiet, and
+    # never if a real Wii Remote is sending samples -- it owns them then)
+    lwz     0, 0x2C(28)
+    cmpwi   0, 0
+    beq     9f
+    cmpwi   29, 0
+    bgt     8f
+    lwz     4, 0x30(28)
+    addi    4, 4, 1
+    stw     4, 0x30(28)
+    cmpwi   4, 90
+    blt     9f
+    lwz     12, CONNOFF(27)
+    add     12, 12, 13
+    slwi    10, 31, 1
+    li      11, 3
+    slw     11, 11, 10
+    lbz     0, 0(12)
+    andc    0, 0, 11
+    stb     0, 0(12)
+    li      11, 1
+    slw     11, 11, 10
+    lbz     0, -1(12)
+    andc    0, 0, 11
+    stb     0, -1(12)
+    lwz     12, CONNST(27)
+    mulli   10, 31, 20
+    li      0, 0
+    stwx    0, 12, 10
+8:  li      0, 0
+    stw     0, 0x2C(28)
+    stw     0, 0x30(28)
+9:  mr      3, 29
     lmw     24, 0x50(1)
     lwz     0, 0x74(1)
     mtlr    0

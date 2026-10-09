@@ -14,7 +14,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DOLPHIN = '/Applications/Dolphin.app/Contents/MacOS/Dolphin'
-GDB_PORT = 2261
+GDB_PORT = int(os.environ.get('LAB_GDB', 2261))
 
 DOLPHIN_INI = """[General]
 GDBPort = %(gdb)d
