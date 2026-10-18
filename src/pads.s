@@ -16,8 +16,8 @@
 #   +0x18 / +0x74 acc_value                 length of each acc vector (the controller setup
 #                                           averages it to spot the shake that picks a hand)
 #
-# Each hand's "acceleration" is one of five resting orientations (high, middle,
-# low, left, right) picked from that hand's stick, plus a one-frame spike along
+# Each hand's "acceleration" is the resting orientation the game reads as one of
+# the six rings, picked from that hand's stick, plus a one-frame spike along
 # the same direction when its shoulder button goes down: the game decides a
 # shake from the jerk between frames and the circle from the direction a few
 # frames later, so the orientation has to stay put while the spike goes by.
@@ -229,7 +229,14 @@
 3:  stw     4, 0x0C(28)
 1:
 
-    # ---- hands: class (0 high, 1 middle, 2 low, 3 left, 4 right, 5 diagonal) per stick ----
+    # ---- hands: each stick picks one of the six rings ----
+    # The stick's direction is a cell of a 3x3 grid (up/centre/down by left/centre/right,
+    # a diagonal when both axes are out and neither is more than twice the other):
+    #   0 up-left  1 up    2 up-right
+    #   3 left     4 centre 5 right
+    #   6 down-left 7 down 8 down-right
+    # and the hand's RINGMAP turns the cell into a ring (0-2 left column top to bottom,
+    # 3-5 right column); a centred stick column means the hand's own side.
 .macro CLASS sx, sy, out
     lwz     4, \sx(1)
     lwz     5, \sy(1)
@@ -239,14 +246,15 @@
     srawi   0, 5, 31
     xor     7, 5, 0
     subf    7, 0, 7                     # |sy|
-    li      \out, 1
+    li      11, 0                       # h: -1 left, 1 right
+    li      12, 0                       # v: -1 down, 1 up
     lwz     0, THRESH(27)
     cmpw    6, 0
     bgt     1f
     cmpw    7, 0
-    ble     9f
-1:  cmpw    6, 0                        # both sticks axes out: a diagonal (class 5)
-    ble     3f                          # when neither axis is more than twice the other
+    ble     8f                          # centred
+1:  cmpw    6, 0
+    ble     3f
     cmpw    7, 0
     ble     3f
     cmpw    6, 7
@@ -254,30 +262,33 @@
     slwi    8, 7, 1
     cmpw    8, 6
     ble     3f
-    li      \out, 5
-    b       9f
+    b       5f
 4:  slwi    8, 6, 1
     cmpw    8, 7
     ble     3f
-    li      \out, 5
-    b       9f
+5:  srawi   11, 4, 31                   # diagonal: both
+    ori     11, 11, 1
+    srawi   12, 5, 31
+    ori     12, 12, 1
+    b       8f
 3:  cmpw    7, 6
     blt     2f
-    cmpwi   5, 0
-    li      \out, 0
-    bgt     9f
-    li      \out, 2
-    b       9f
-2:  cmpwi   4, 0
-    li      \out, 4
-    bgt     9f
-    li      \out, 3
-9:
+    srawi   12, 5, 31                   # mostly vertical
+    ori     12, 12, 1
+    b       8f
+2:  srawi   11, 4, 31                   # mostly horizontal
+    ori     11, 11, 1
+8:  mulli   12, 12, 3
+    subfic  \out, 12, 4
+    add     \out, \out, 11              # 4 - 3v + h
 .endm
 
-    # left hand (the Nunchuk) -> r14-ish via stack; right hand (the remote)
-    CLASS   0x0C, 0x10, 9               # r9  = left class
-    CLASS   0x14, 0x18, 10              # r10 = right class
+    CLASS   0x0C, 0x10, 9               # r9  = left hand's cell (the Nunchuk)
+    CLASS   0x14, 0x18, 10              # r10 = right hand's cell (the remote)
+    addi    4, 27, RINGMAP
+    lbzx    9, 4, 9                     # -> rings
+    addi    4, 27, RINGMAP+12
+    lbzx    10, 4, 10
 
     # shake edges (state +0x10 / +0x14 = pending spike, +0x18 / +0x1C = previous button)
     lwz     4, 0x1C(1)
@@ -297,7 +308,8 @@
     li      0, 1
     stw     0, 0x14(28)
 1:
-    # left vector -> f1..f3 ; right vector -> f4..f6
+    # left vector -> f1..f3 ; right vector -> f4..f6 (each hand has its own ring table:
+    # the game reads the two hands differently)
     mulli   4, 9, 12
     add     4, 4, 27
     lfs     1, VECS(4)
@@ -305,9 +317,9 @@
     lfs     3, VECS+8(4)
     mulli   4, 10, 12
     add     4, 4, 27
-    lfs     4, VECS(4)
-    lfs     5, VECS+4(4)
-    lfs     6, VECS+8(4)
+    lfs     4, VECS+72(4)
+    lfs     5, VECS+76(4)
+    lfs     6, VECS+80(4)
     lfs     0, SPIKE(27)
     lfs     11, ONE(27)                 # acc_value (the vector's length): 1 at rest ...
     fmr     12, 11

@@ -30,19 +30,39 @@ CC_MAP = [
     (0x0001, WM_UP), (0x4000, WM_DOWN), (0x8000, WM_RIGHT), (0x0002, WM_LEFT),
 ]
 
-# resting orientations, in the game's acceleration space: high, middle, low, left, right, diagonal
-# (the game tells six poses apart; the sixth is the remote pointing away, z < 0)
-VECTORS = [(0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0)]
+# The rings: 0-2 the left column top to bottom, 3-5 the right column.  The game's pose
+# classifier (USA 0x8011702C) negates x for both hands, then reads the vector through
+# per-hand tables, so the same orientation is a different ring for each hand.  These are
+# vectors it reads as each ring, in the space the hook writes (before the negation):
+#   z < 0 top of the hand's own side, -y middle, z > 0 bottom; x far out with z near 0
+#   the middle of a side, tilted in z for that side's top (z < 0) or the opposite low ring.
+RING_VECTORS = (
+    # left hand (the Nunchuk)
+    [(0.0, 0.0, -1.0), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0),
+     (-0.8, 0.0, -0.6), (-1.0, 0.0, 0.0), (0.8, 0.0, 0.6)],
+    # right hand (the remote)
+    [(0.8, 0.0, -0.6), (1.0, 0.0, 0.0), (-0.8, 0.0, 0.6),
+     (0.0, 0.0, -1.0), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0)],
+)
+# stick cell (up-left, up, up-right, left, centre, right, down-left, down, down-right) -> ring;
+# up/centre/down pick the row, left/right the column, a centred stick the hand's own column
+RINGMAP = (
+    [0, 0, 3, 1, 1, 4, 2, 2, 5],
+    [0, 3, 3, 1, 4, 4, 2, 5, 5],
+)
 
 OFF = dict(SPIKE=0x3C, THRESH=0x40, SPEED=0x44, DEADZONE=0x48, INV1000=0x4C, SCALE=0x50,
-           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0, CONNOFF=0x120, CONNST=0x124, ONE=0x128, VECS=0x130)
+           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0, CONNOFF=0x120, CONNST=0x124, ONE=0x128, VECS=0x130, RINGMAP=0x1C0)
 MAGIC = 0x53444131          # 'SDA1'
 
 
-def cfg_blob(conn_off, conn_state, flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTORS):
+def cfg_blob(conn_off, conn_state, flags=3, spike=2.6, thresh=50, speed=60, deadzone=15,
+             vectors=RING_VECTORS, ringmap=RINGMAP):
     b = bytearray(STATE - CFG)
-    for i, v in enumerate(vectors):
-        struct.pack_into('>3f', b, OFF['VECS'] + i * 12, *v)
+    for h in range(2):
+        for i, v in enumerate(vectors[h]):
+            struct.pack_into('>3f', b, OFF['VECS'] + h * 72 + i * 12, *v)
+        b[OFF['RINGMAP'] + h * 12:OFF['RINGMAP'] + h * 12 + 9] = bytes(ringmap[h])
     struct.pack_into('>f', b, OFF['SPIKE'], spike)
     struct.pack_into('>i', b, OFF['THRESH'], thresh)
     struct.pack_into('>i', b, OFF['SPEED'], speed)

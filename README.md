@@ -12,12 +12,18 @@ makes a pad look like both:
 
 | Input | Action |
 | --- | --- |
-| Left stick | Left maraca position (high / middle / low / left / right; a diagonal reaches the sixth pose, e.g. the top-left calibration ring) |
-| C stick (GameCube) / right stick (Classic) | Right maraca position (same, diagonals included) |
+| Left stick | Left maraca: points at a ring (see below) |
+| C stick (GameCube) / right stick (Classic) | Right maraca: points at a ring |
 | L / ZL | Shake the left maraca |
 | R / ZR | Shake the right maraca |
 | Left stick (menus) | Move the pointer |
 | A, B, X (1), Y (2), Start (+), D-pad | Wii Remote buttons |
+
+Each stick points at one of the six rings the way they sit on screen: up, centre and
+down pick the top, middle and bottom row; pushed left or right (or diagonally) it
+picks that column; left centred, it stays on its own maraca's side. So the left
+stick at rest is the middle-left ring and up-right is the top-right ring, and the
+same direction means the same ring on both sticks.
 
 The game's controller setup ("shake the Wii Remote and the Nunchuk") works with the
 pad too: press L, then R, where it asks for a shake. The patch also fills in the
