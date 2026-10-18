@@ -229,7 +229,7 @@
 3:  stw     4, 0x0C(28)
 1:
 
-    # ---- hands: class (0 high, 1 middle, 2 low, 3 left, 4 right) per stick ----
+    # ---- hands: class (0 high, 1 middle, 2 low, 3 left, 4 right, 5 diagonal) per stick ----
 .macro CLASS sx, sy, out
     lwz     4, \sx(1)
     lwz     5, \sy(1)
@@ -245,7 +245,23 @@
     bgt     1f
     cmpw    7, 0
     ble     9f
-1:  cmpw    7, 6
+1:  cmpw    6, 0                        # both sticks axes out: a diagonal (class 5)
+    ble     3f                          # when neither axis is more than twice the other
+    cmpw    7, 0
+    ble     3f
+    cmpw    6, 7
+    blt     4f
+    slwi    8, 7, 1
+    cmpw    8, 6
+    ble     3f
+    li      \out, 5
+    b       9f
+4:  slwi    8, 6, 1
+    cmpw    8, 7
+    ble     3f
+    li      \out, 5
+    b       9f
+3:  cmpw    7, 6
     blt     2f
     cmpwi   5, 0
     li      \out, 0
@@ -284,14 +300,14 @@
     # left vector -> f1..f3 ; right vector -> f4..f6
     mulli   4, 9, 12
     add     4, 4, 27
-    lfs     1, 0(4)
-    lfs     2, 4(4)
-    lfs     3, 8(4)
+    lfs     1, VECS(4)
+    lfs     2, VECS+4(4)
+    lfs     3, VECS+8(4)
     mulli   4, 10, 12
     add     4, 4, 27
-    lfs     4, 0(4)
-    lfs     5, 4(4)
-    lfs     6, 8(4)
+    lfs     4, VECS(4)
+    lfs     5, VECS+4(4)
+    lfs     6, VECS+8(4)
     lfs     0, SPIKE(27)
     lfs     11, ONE(27)                 # acc_value (the vector's length): 1 at rest ...
     fmr     12, 11

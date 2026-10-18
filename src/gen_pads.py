@@ -30,18 +30,19 @@ CC_MAP = [
     (0x0001, WM_UP), (0x4000, WM_DOWN), (0x8000, WM_RIGHT), (0x0002, WM_LEFT),
 ]
 
-# resting orientations, in the game's acceleration space: high, middle, low, left, right
-VECTORS = [(0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (1.0, 0.0, 0.0)]
+# resting orientations, in the game's acceleration space: high, middle, low, left, right, diagonal
+# (the game tells six poses apart; the sixth is the remote pointing away, z < 0)
+VECTORS = [(0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (0.0, -1.0, 0.0), (-1.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 0.0, -1.0)]
 
 OFF = dict(SPIKE=0x3C, THRESH=0x40, SPEED=0x44, DEADZONE=0x48, INV1000=0x4C, SCALE=0x50,
-           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0, CONNOFF=0x120, CONNST=0x124, ONE=0x128)
+           FLAGS=0x54, MAGIC_D=0x58, GCMAP=0x60, CCMAP=0xC0, CONNOFF=0x120, CONNST=0x124, ONE=0x128, VECS=0x130)
 MAGIC = 0x53444131          # 'SDA1'
 
 
 def cfg_blob(conn_off, conn_state, flags=3, spike=2.6, thresh=50, speed=60, deadzone=15, vectors=VECTORS):
     b = bytearray(STATE - CFG)
     for i, v in enumerate(vectors):
-        struct.pack_into('>3f', b, i * 12, *v)
+        struct.pack_into('>3f', b, OFF['VECS'] + i * 12, *v)
     struct.pack_into('>f', b, OFF['SPIKE'], spike)
     struct.pack_into('>i', b, OFF['THRESH'], thresh)
     struct.pack_into('>i', b, OFF['SPEED'], speed)

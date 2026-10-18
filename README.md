@@ -12,8 +12,8 @@ makes a pad look like both:
 
 | Input | Action |
 | --- | --- |
-| Left stick | Left maraca position (high / middle / low / left / right) |
-| C stick (GameCube) / right stick (Classic) | Right maraca position |
+| Left stick | Left maraca position (high / middle / low / left / right; a diagonal reaches the sixth pose, e.g. the top-left calibration ring) |
+| C stick (GameCube) / right stick (Classic) | Right maraca position (same, diagonals included) |
 | L / ZL | Shake the left maraca |
 | R / ZR | Shake the right maraca |
 | Left stick (menus) | Move the pointer |
