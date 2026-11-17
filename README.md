@@ -31,6 +31,11 @@ game's own "Wii Remote and Nunchuk connected" flags, which only the Wii Remote
 connect callbacks set, so no real Wii Remote or Nunchuk is needed to get past the
 "Connect a Nunchuk" screen.
 
+**DK Bongos** in a GameCube port are detected automatically (they have no sticks).
+The left drum shakes the left maraca and the right drum the right one; with no
+sticks, each maraca stays on its own middle ring. The drums also send Wii Remote
+A/1 (right) and B/2 (left), and Start is +, so they work in menus.
+
 A GameCube pad in port 1 / 2 drives Wii Remote 1 / 2. A Classic Controller works
 when plugged into the Wii Remote. A real Wii Remote still works next to the pad.
 

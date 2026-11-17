@@ -59,6 +59,7 @@
 2:
     # ---- who is driving this channel? ----
     li      26, 0
+    li      25, 0                       # 1 = DK Bongos
     lwz     0, FLAGS(27)
     andi.   0, 0, 1
     beq     4f                          # GameCube pads disabled
@@ -73,9 +74,16 @@
     stw     6, 0x24(28)
     rlwinm. 0, 5, 0, 0, 0               # error bit
     bne     4f
-    rlwinm. 0, 5, 0, 8, 8               # bit 23 is always set in a pad's answer
-    beq     4f
-    li      26, 1
+    # Only the error bit marks an empty port: DK Bongos answer like a pad but
+    # leave the use-origin bit (23) clear.  They have no sticks, so both stick
+    # words read ~0 -- a real pad's rest near 0x80 never does.
+    andi.   0, 5, 0xFCFC                # main stick
+    bne     3f
+    rlwinm  0, 6, 16, 16, 31
+    andi.   0, 0, 0xFCFC                # C stick
+    bne     3f
+    li      25, 1
+3:  li      26, 1
     b       5f
 4:  lwz     0, FLAGS(27)
     andi.   0, 0, 2
@@ -131,7 +139,25 @@
     stw     7, 0x1C(1)                  # L -> left shake
     rlwinm  7, 5, 11, 31, 31
     stw     7, 0x20(1)                  # R -> right shake
-    mr      9, 5
+    cmpwi   25, 0
+    beq     8f
+    # DK Bongos: sticks centred (each hand on its own middle ring),
+    # left drum (B/Y) shakes the left maraca, right drum (A/X) the right
+    li      7, 0
+    stw     7, 0x0C(1)
+    stw     7, 0x10(1)
+    stw     7, 0x14(1)
+    stw     7, 0x18(1)
+    andis.  0, 5, 0x0A00
+    beq     1f
+    li      7, 1
+1:  stw     7, 0x1C(1)
+    li      7, 0
+    andis.  0, 5, 0x0500
+    beq     1f
+    li      7, 1
+1:  stw     7, 0x20(1)
+8:  mr      9, 5
     addi    8, 27, GCMAP
     b       7f
 6:  # Classic Controller: ex_status.cl at +0x60
